@@ -12,5 +12,7 @@ data class Round(
     val holes: Int,
     val playerNames: List<String>, // Stored as a JSON string or comma-separated list via TypeConverter
     val isFinished: Boolean = false,
-    val scores: Map<String, Map<Int, Int>> // PlayerName -> (HoleNumber -> Score)
+    val scores: Map<String, Map<Int, Int>>, // PlayerName -> (HoleNumber -> Score)
+    val pars: List<Int>? = null, // List of par values for each hole. Nullable for backward compatibility.
+    val isMiniGolf: Boolean = false // Flag for Mini Golf vs Standard Golf
 )

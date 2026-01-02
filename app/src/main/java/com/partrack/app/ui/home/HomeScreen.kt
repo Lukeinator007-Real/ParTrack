@@ -1,7 +1,9 @@
 package com.partrack.app.ui.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -10,20 +12,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.GolfCourse
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -34,8 +46,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.partrack.app.data.AppDatabase
@@ -81,19 +96,28 @@ fun HomeScreen(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-            TopAppBar(
-                title = { Text("ParTrack") },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimary
-                )
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onNewRound) {
-                Icon(Icons.Filled.Add, contentDescription = "New Round")
-            }
+             // Custom Header like screenshot
+             Column(
+                 modifier = Modifier
+                     .fillMaxWidth()
+                     .background(MaterialTheme.colorScheme.primary) 
+                     .padding(16.dp)
+                     .padding(top = 16.dp)
+             ) {
+                 Text(
+                     text = "Golf Scorer",
+                     style = MaterialTheme.typography.headlineMedium,
+                     color = MaterialTheme.colorScheme.onPrimary,
+                     fontWeight = FontWeight.Bold
+                 )
+                 Text(
+                     text = "Track your rounds",
+                     style = MaterialTheme.typography.bodyMedium,
+                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                 )
+             }
         }
     ) { innerPadding ->
         LazyColumn(
@@ -103,6 +127,30 @@ fun HomeScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            item {
+                Button(
+                    onClick = onNewRound,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("New Round", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            
+            item {
+                Text(
+                    text = "Your Rounds (${rounds.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+
             items(rounds) { round ->
                 RoundItem(
                     round = round,
@@ -121,49 +169,128 @@ fun RoundItem(
     onDelete: () -> Unit
 ) {
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+    val formattedDate = dateFormatter.format(Date(round.date))
     
-    // Determine winner if finished
-    val winnerText = if (round.isFinished) {
-        val scores = round.scores
-        val playerTotalScores = round.playerNames.map { player ->
-             player to (scores[player]?.values?.sum() ?: 0)
-        }
-        val minScore = playerTotalScores.minOfOrNull { it.second } ?: 0
-        val winners = playerTotalScores.filter { it.second == minScore }.map { it.first }
-        
-        if (winners.size == 1) {
-            "Winner: ${winners.first()} ($minScore)"
-        } else {
-             "Tie: ${winners.joinToString(", ")} ($minScore)"
-        }
-    } else {
-        "In Progress"
+    // Calculate progress (holes played / total holes)
+    val holesPlayed = if (round.scores.values.isNotEmpty()) {
+         round.scores.values.flatMap { it.keys }.maxOrNull() ?: 0
+    } else 0
+    
+    val progress = if (round.holes > 0) holesPlayed.toFloat() / round.holes.toFloat() else 0f
+    
+    // Determine leader
+    val scores = round.scores
+    val playerTotalScores = round.playerNames.map { player ->
+         player to (scores[player]?.values?.sum() ?: 0)
     }
+    val minScore = playerTotalScores.minOfOrNull { it.second } ?: 0
+    val leaders = playerTotalScores.filter { it.second == minScore }.map { it.first }
+    
+    val leaderText = if (leaders.isNotEmpty()) {
+        "Leading: ${leaders.first()}" + if (leaders.size > 1) " (+${leaders.size - 1})" else ""
+    } else "No scores yet"
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(text = round.name, style = MaterialTheme.typography.titleMedium)
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Delete,
-                        contentDescription = "Delete Round",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                Text(
+                    text = round.name, 
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        color = if (round.isFinished) MaterialTheme.colorScheme.secondary.copy(alpha=0.2f) else Color(0xFFFFF8E1), // Yellowish for progress
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = if (round.isFinished) "Finished" else "In Progress",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            color = if (round.isFinished) MaterialTheme.colorScheme.secondary else Color(0xFFFBC02D)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                    }
                 }
             }
-            Text(text = dateFormatter.format(Date(round.date)), style = MaterialTheme.typography.bodySmall)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "${round.playerNames.size} Players • ${round.holes} Holes", style = MaterialTheme.typography.bodyMedium)
-            Text(text = winnerText, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+            
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Filled.Flag, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Gray)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(text = formattedDate, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                if (round.isMiniGolf) {
+                     Surface(color = MaterialTheme.colorScheme.primary.copy(alpha=0.1f), shape = RoundedCornerShape(4.dp)) {
+                         Text("Mini Golf", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 4.dp))
+                     }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                     Icon(Icons.Filled.GolfCourse, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                     Spacer(modifier = Modifier.width(4.dp))
+                     Text("${round.holes} holes", style = MaterialTheme.typography.bodyMedium)
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                     Icon(Icons.Filled.Groups, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                     Spacer(modifier = Modifier.width(4.dp))
+                     Text("${round.playerNames.size} players", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("Progress", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Text("$holesPlayed/${round.holes} holes", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().height(6.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+            )
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha=0.3f), 
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Filled.EmojiEvents, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(leaderText, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Spacer(modifier = Modifier.weight(1f))
+                    
+                    TextButton(onClick = onClick) {
+                        Text("Continue >", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }
