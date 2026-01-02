@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.partrack.app.data.AppDatabase
@@ -47,8 +48,9 @@ fun ProfilesScreen(
 ) {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
-    val viewModel: ProfilesViewModel = viewModel(factory = ProfilesViewModelFactory(database.playerDao()))
+    val viewModel: ProfilesViewModel = viewModel(factory = ProfilesViewModelFactory(database.playerDao(), database.roundDao()))
     val players by viewModel.players.collectAsState(initial = emptyList())
+    val stats by viewModel.stats.collectAsState(initial = ProfilesViewModel.Stats(0, 0, 0))
 
     var newPlayerName by remember { mutableStateOf("") }
 
@@ -65,6 +67,17 @@ fun ProfilesScreen(
         }
     ) { innerPadding ->
         LazyColumn(modifier = Modifier.padding(innerPadding).padding(16.dp)) {
+            item {
+                Text("Overall Stats", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    StatCard("Total Rounds", "${stats.totalRounds}", Modifier.weight(1f))
+                    StatCard("Holes Played", "${stats.totalHoles}", Modifier.weight(1f))
+                    StatCard("Holes-in-One", "${stats.holesInOne}", Modifier.weight(1f))
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+            
             item {
                 Text("Player Profiles", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
@@ -114,6 +127,16 @@ fun PlayerItem(player: Player, onDelete: () -> Unit) {
             IconButton(onClick = onDelete) {
                 Icon(Icons.Filled.Delete, contentDescription = "Delete Player")
             }
+        }
+    }
+}
+
+@Composable
+fun StatCard(title: String, value: String, modifier: Modifier = Modifier) {
+    Card(modifier = modifier.padding(4.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(text = title, style = MaterialTheme.typography.labelMedium)
+            Text(text = value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
     }
 }

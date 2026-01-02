@@ -87,6 +87,7 @@ fun NewRoundScreen(
 
     // Players
     val selectedPlayers = remember { mutableStateListOf<Player>() }
+    var newPlayerName by remember { mutableStateOf("") }
 
     // Initialize Pars when holes change
     val currentHolesCount = if (selectedHolesOption == -1) {
@@ -331,8 +332,25 @@ fun NewRoundScreen(
                         Text(player.name)
                     }
                 }
-                if (allPlayers.isEmpty()) {
-                    Text("No players found. Add some in the Profiles screen.")
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                     OutlinedTextField(
+                        value = newPlayerName,
+                        onValueChange = { newPlayerName = it },
+                        label = { Text("Add New Player") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = { 
+                        if(newPlayerName.isNotBlank()) {
+                            viewModel.addPlayer(newPlayerName)
+                            newPlayerName = ""
+                        }
+                    }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Player")
+                    }
                 }
             }
 
@@ -358,7 +376,7 @@ fun NewRoundScreen(
                     )
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = selectedPlayers.isNotEmpty() || allPlayers.isEmpty() // Enable if players selected, or if there are no profiles to select from
+                enabled = selectedPlayers.isNotEmpty() || allPlayers.isEmpty()
             ) {
                 Text(if (isCreatingNewCourse) "Save Course & Start Round" else "Start Round")
             }

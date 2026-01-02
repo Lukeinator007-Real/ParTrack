@@ -8,6 +8,8 @@ import com.partrack.app.ui.home.HomeScreen
 import com.partrack.app.ui.profiles.ProfilesScreen
 import com.partrack.app.ui.round.NewRoundScreen
 import com.partrack.app.ui.round.RoundScreen
+import com.partrack.app.ui.round.RoundSettingsScreen
+import com.partrack.app.ui.round.ScorecardScreen
 
 @Composable
 fun ParTrackApp() {
@@ -36,7 +38,23 @@ fun ParTrackApp() {
             RoundScreen(
                 roundId = roundId,
                 onNavigateUp = { navController.navigateUp() },
-                onFinishRound = { navController.navigateUp() }
+                onFinishRound = { navController.navigateUp() },
+                onScorecardClick = { navController.navigate("scorecard/$roundId") },
+                onSettingsClick = { navController.navigate("round_settings/$roundId") }
+            )
+        }
+        composable("round_settings/{roundId}") { backStackEntry ->
+            val roundId = backStackEntry.arguments?.getString("roundId")?.toLongOrNull() ?: 0L
+            RoundSettingsScreen(
+                roundId = roundId,
+                onNavigateUp = { navController.navigateUp() }
+            )
+        }
+        composable("scorecard/{roundId}") { backStackEntry ->
+            val roundId = backStackEntry.arguments?.getString("roundId")?.toLongOrNull() ?: 0L
+            ScorecardScreen(
+                roundId = roundId,
+                onNavigateUp = { navController.navigateUp() }
             )
         }
         composable("profiles") {

@@ -30,6 +30,27 @@ class RoundViewModel(
         }
     }
 
+    fun updateParForHole(holeIndex: Int, newPar: Int) {
+        viewModelScope.launch {
+            val currentRound = roundDao.getRoundById(roundId) ?: return@launch
+            val currentPars = currentRound.pars?.toMutableList() ?: return@launch
+            
+            if (holeIndex >= 0 && holeIndex < currentPars.size) {
+                currentPars[holeIndex] = newPar
+                val updatedRound = currentRound.copy(pars = currentPars)
+                roundDao.updateRound(updatedRound)
+            }
+        }
+    }
+
+    fun updateRoundDetails(name: String, holes: Int) {
+        viewModelScope.launch {
+            val currentRound = roundDao.getRoundById(roundId) ?: return@launch
+            val updatedRound = currentRound.copy(name = name, holes = holes)
+            roundDao.updateRound(updatedRound)
+        }
+    }
+
     fun updateTotalHoles(newHoles: Int) {
         viewModelScope.launch {
             val currentRound = roundDao.getRoundById(roundId) ?: return@launch
@@ -50,9 +71,6 @@ class RoundViewModel(
         if (holeNumber == 1) return round.playerNames
         
         // Sort players based on previous hole(s) performance
-        // If holeNumber is N, we look at scores for N-1.
-        // If tie, look at N-2, etc.
-        
         return round.playerNames.sortedWith { p1, p2 ->
             comparePlayers(p1, p2, holeNumber - 1, round.scores)
         }
@@ -60,13 +78,6 @@ class RoundViewModel(
 
     private fun comparePlayers(p1: String, p2: String, holeToCheck: Int, scores: Map<String, Map<Int, Int>>): Int {
         if (holeToCheck < 1) {
-            // If we went all the way back and still tied, preserve original order (or any stable order)
-            // Original order is not explicitly stored as index in playerNames list here inside the comparator easily unless we pass indices.
-            // But since sortedWith is stable, if we return 0, original order is preserved.
-            // However, we want "player who started first beating the one who started after on hole 1"
-            // This implies the original order in playerNames list is the tie breaker at the end.
-            // Since sortedWith is stable, returning 0 should work if the input list is in original order.
-            // But the input list to sortedWith might not be in original order if we just passed round.playerNames which IS in original order.
             return 0 
         }
 

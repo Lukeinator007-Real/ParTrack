@@ -2,6 +2,7 @@ package com.partrack.app.ui.round
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -31,6 +35,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -68,7 +74,9 @@ import kotlinx.coroutines.launch
 fun RoundScreen(
     roundId: Long,
     onNavigateUp: () -> Unit,
-    onFinishRound: () -> Unit
+    onFinishRound: () -> Unit,
+    onScorecardClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
@@ -87,19 +95,6 @@ fun RoundScreen(
     val totalHoles = currentRound.holes
     val pagerState = rememberPagerState(pageCount = { totalHoles })
     val scope = rememberCoroutineScope()
-    
-    var showEditHolesDialog by remember { mutableStateOf(false) }
-
-    if (showEditHolesDialog) {
-        EditHolesDialog(
-            currentHoles = totalHoles,
-            onDismiss = { showEditHolesDialog = false },
-            onConfirm = { newHoles ->
-                viewModel.updateTotalHoles(newHoles)
-                showEditHolesDialog = false
-            }
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -116,7 +111,10 @@ fun RoundScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showEditHolesDialog = true }) {
+                    IconButton(onClick = onScorecardClick) {
+                        Icon(Icons.Filled.List, contentDescription = "Scorecard")
+                    }
+                    IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = "Edit Round Settings")
                     }
                 },
@@ -153,6 +151,9 @@ fun RoundScreen(
                     scores = currentRound.scores,
                     onScoreChange = { player, score ->
                         viewModel.updateScore(player, holeNumber, score)
+                    },
+                    onParChange = { newPar ->
+                        viewModel.updateParForHole(page, newPar)
                     }
                 )
             }
@@ -211,8 +212,22 @@ fun HoleContent(
     isMiniGolf: Boolean,
     players: List<String>,
     scores: Map<String, Map<Int, Int>>,
-    onScoreChange: (String, Int) -> Unit
+    onScoreChange: (String, Int) -> Unit,
+    onParChange: (Int) -> Unit
 ) {
+    var showParDialog by remember { mutableStateOf(false) }
+
+    if (showParDialog) {
+        EditParDialog(
+            currentPar = par ?: if (isMiniGolf) 2 else 4,
+            onDismiss = { showParDialog = false },
+            onConfirm = { newPar ->
+                onParChange(newPar)
+                showParDialog = false
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
@@ -229,22 +244,33 @@ fun HoleContent(
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
-                if (par != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                             imageVector = Icons.Filled.Star, // Flag icon would be better but Star works for now
-                             contentDescription = null,
-                             modifier = Modifier.size(16.dp),
-                             tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Par $par",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clickable { showParDialog = true }
+                        .padding(8.dp)
+                ) {
+                    Icon(
+                         imageVector = Icons.Filled.Star, 
+                         contentDescription = null,
+                         modifier = Modifier.size(16.dp),
+                         tint = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Par ${par ?: "-"}",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Filled.Edit,
+                        contentDescription = "Edit Par",
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+                    )
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -516,6 +542,43 @@ fun EditHolesDialog(
                 val holes = text.toIntOrNull()
                 if (holes != null && holes > 0) {
                     onConfirm(holes)
+                }
+            }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun EditParDialog(
+    currentPar: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var text by remember { mutableStateOf(currentPar.toString()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change Par") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { if (it.all { c -> c.isDigit() }) text = it },
+                label = { Text("Par") },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number)
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val par = text.toIntOrNull()
+                if (par != null && par > 0) {
+                    onConfirm(par)
                 }
             }) {
                 Text("Save")

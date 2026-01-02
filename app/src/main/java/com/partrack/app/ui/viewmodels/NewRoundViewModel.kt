@@ -59,6 +59,12 @@ class NewRoundViewModel(
             courseDao.insertCourse(newCourse)
         }
     }
+
+    fun addPlayer(name: String) {
+        viewModelScope.launch {
+            playerDao.insertPlayer(Player(name = name))
+        }
+    }
 }
 
 class NewRoundViewModelFactory(
