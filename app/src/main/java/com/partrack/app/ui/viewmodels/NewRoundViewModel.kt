@@ -3,21 +3,25 @@ package com.partrack.app.ui.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.partrack.app.data.AppSettings
 import com.partrack.app.data.Course
 import com.partrack.app.data.CourseDao
 import com.partrack.app.data.Player
 import com.partrack.app.data.PlayerDao
 import com.partrack.app.data.Round
 import com.partrack.app.data.RoundDao
+import com.partrack.app.data.SettingsDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class NewRoundViewModel(
     private val courseDao: CourseDao,
     private val roundDao: RoundDao,
-    private val playerDao: PlayerDao
+    private val playerDao: PlayerDao,
+    private val settingsDao: SettingsDao
 ) : ViewModel() {
 
     val courses: Flow<List<Course>> = courseDao.getAllCourses()
@@ -25,6 +29,9 @@ class NewRoundViewModel(
         
     val players: Flow<List<Player>> = playerDao.getAllPlayers()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val settings: Flow<AppSettings> = settingsDao.getSettings().filterNotNull()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
 
     fun createRound(
         name: String,
@@ -70,12 +77,13 @@ class NewRoundViewModel(
 class NewRoundViewModelFactory(
     private val courseDao: CourseDao,
     private val roundDao: RoundDao,
-    private val playerDao: PlayerDao
+    private val playerDao: PlayerDao,
+    private val settingsDao: SettingsDao
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(NewRoundViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return NewRoundViewModel(courseDao, roundDao, playerDao) as T
+            return NewRoundViewModel(courseDao, roundDao, playerDao, settingsDao) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

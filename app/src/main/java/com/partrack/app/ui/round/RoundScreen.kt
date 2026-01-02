@@ -23,10 +23,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
@@ -112,7 +112,7 @@ fun RoundScreen(
                 },
                 actions = {
                     IconButton(onClick = onScorecardClick) {
-                        Icon(Icons.Filled.List, contentDescription = "Scorecard")
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = "Scorecard")
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = "Edit Round Settings")

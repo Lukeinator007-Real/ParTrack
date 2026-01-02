@@ -17,8 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
@@ -28,7 +26,6 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -36,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,6 +48,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.partrack.app.data.AppDatabase
+import com.partrack.app.data.AppSettings
 import com.partrack.app.data.Course
 import com.partrack.app.data.Player
 import com.partrack.app.ui.viewmodels.NewRoundViewModel
@@ -64,11 +63,12 @@ fun NewRoundScreen(
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
     val viewModel: NewRoundViewModel = viewModel(
-        factory = NewRoundViewModelFactory(database.courseDao(), database.roundDao(), database.playerDao())
+        factory = NewRoundViewModelFactory(database.courseDao(), database.roundDao(), database.playerDao(), database.settingsDao())
     )
 
     val courses by viewModel.courses.collectAsState(initial = emptyList())
     val allPlayers by viewModel.players.collectAsState(initial = emptyList())
+    val settings by viewModel.settings.collectAsState(initial = AppSettings())
 
     var roundName by remember { mutableStateOf("") }
     var selectedHolesOption by remember { mutableIntStateOf(9) }
@@ -80,7 +80,12 @@ fun NewRoundScreen(
     var isCreatingNewCourse by remember { mutableStateOf(false) }
     
     // Game Mode
-    var isMiniGolf by remember { mutableStateOf(false) }
+    var isMiniGolf by remember(settings) { mutableStateOf(settings.defaultGameModeIsMiniGolf) }
+
+    // Set initial game mode from settings
+    LaunchedEffect(settings) {
+        isMiniGolf = settings.defaultGameModeIsMiniGolf
+    }
 
     // Pars
     val pars = remember { mutableStateListOf<Int>() }
@@ -103,7 +108,7 @@ fun NewRoundScreen(
              repeat(currentHolesCount - pars.size) { pars.add(defaultPar) } 
          } else {
              while (pars.size > currentHolesCount) {
-                 pars.removeLast()
+                 pars.removeAt(pars.lastIndex)
              }
          }
     }
@@ -360,7 +365,7 @@ fun NewRoundScreen(
                 onClick = {
                     val finalPlayers = if (selectedPlayers.isEmpty()) listOf("Player 1") else selectedPlayers.map { it.name }
                     
-                    val name = if (roundName.isBlank()) "Round ${System.currentTimeMillis()}" else roundName
+                    val name = roundName.ifBlank { "Round ${System.currentTimeMillis()}" }
                     
                     if (isCreatingNewCourse) {
                         viewModel.addCourse(name, currentHolesCount, pars.toList())

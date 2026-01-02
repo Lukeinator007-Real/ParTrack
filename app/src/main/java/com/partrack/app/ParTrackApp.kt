@@ -10,6 +10,7 @@ import com.partrack.app.ui.round.NewRoundScreen
 import com.partrack.app.ui.round.RoundScreen
 import com.partrack.app.ui.round.RoundSettingsScreen
 import com.partrack.app.ui.round.ScorecardScreen
+import com.partrack.app.ui.settings.SettingsScreen
 
 @Composable
 fun ParTrackApp() {
@@ -20,7 +21,8 @@ fun ParTrackApp() {
             HomeScreen(
                 onNewRound = { navController.navigate("new_round") },
                 onRoundClick = { roundId -> navController.navigate("round/$roundId") },
-                onProfilesClick = { navController.navigate("profiles") }
+                onProfilesClick = { navController.navigate("profiles") },
+                onSettingsClick = { navController.navigate("settings") }
             )
         }
         composable("new_round") {
@@ -59,6 +61,9 @@ fun ParTrackApp() {
         }
         composable("profiles") {
             ProfilesScreen(onNavigateUp = { navController.navigateUp() })
+        }
+        composable("settings") {
+            SettingsScreen(onNavigateUp = { navController.navigateUp() })
         }
     }
 }

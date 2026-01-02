@@ -84,7 +84,7 @@ fun ScorecardScreen(
                         total += score
                         ScorecardCell(if (score > 0) "$score" else "-")
                     }
-                    ScorecardCell("$total", isHeader = true, isTotal = true)
+                    ScorecardCell("$total", isHeader = true)
                 }
             }
         }
@@ -92,7 +92,7 @@ fun ScorecardScreen(
 }
 
 @Composable
-fun ScorecardCell(text: String, isHeader: Boolean = false, isTotal: Boolean = false) {
+fun ScorecardCell(text: String, isHeader: Boolean = false) {
     Box(
         modifier = Modifier
             .width(80.dp)

@@ -3,7 +3,6 @@ package com.partrack.app.ui.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,6 +24,7 @@ import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.GolfCourse
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,15 +35,16 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,14 +68,16 @@ import java.util.Locale
 fun HomeScreen(
     onNewRound: () -> Unit,
     onRoundClick: (Long) -> Unit,
-    onProfilesClick: () -> Unit
+    onProfilesClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
-    val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(database.roundDao()))
-    val rounds by viewModel.rounds.collectAsState(initial = emptyList())
+    val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(database.roundDao(), database.settingsDao()))
+    val uiState by viewModel.uiState.collectAsState()
     
     var roundToDelete by remember { mutableStateOf<Round?>(null) }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     if (roundToDelete != null) {
         AlertDialog(
@@ -100,22 +103,15 @@ fun HomeScreen(
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
-             // Custom Header like screenshot
-             Column(
-                 modifier = Modifier
-                     .fillMaxWidth()
-                     .background(MaterialTheme.colorScheme.primary) 
-                     .padding(16.dp)
-                     .padding(top = 16.dp)
-             ) {
+             Column {
                  Row(
-                     modifier = Modifier.fillMaxWidth(),
+                     modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary).padding(16.dp).padding(top = 24.dp),
                      horizontalArrangement = Arrangement.SpaceBetween,
                      verticalAlignment = Alignment.CenterVertically
                  ) {
                      Column {
                          Text(
-                             text = "Golf Scorer",
+                             text = "ParTrack",
                              style = MaterialTheme.typography.headlineMedium,
                              color = MaterialTheme.colorScheme.onPrimary,
                              fontWeight = FontWeight.Bold
@@ -126,17 +122,38 @@ fun HomeScreen(
                              color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                          )
                      }
-                     IconButton(onClick = onProfilesClick) {
-                         Icon(
-                             imageVector = Icons.Filled.Person, 
-                             contentDescription = "Profiles", 
-                             tint = MaterialTheme.colorScheme.onPrimary
-                         )
+                     Row {
+                         IconButton(onClick = onProfilesClick) {
+                             Icon(
+                                 imageVector = Icons.Filled.Person, 
+                                 contentDescription = "Profiles", 
+                                 tint = MaterialTheme.colorScheme.onPrimary
+                             )
+                         }
+                         IconButton(onClick = onSettingsClick) {
+                             Icon(
+                                 imageVector = Icons.Filled.Settings, 
+                                 contentDescription = "Settings", 
+                                 tint = MaterialTheme.colorScheme.onPrimary
+                             )
+                         }
+                     }
+                 }
+                 if (uiState.showTabs) {
+                     PrimaryTabRow(selectedTabIndex = selectedTabIndex) {
+                         Tab(selected = selectedTabIndex == 0, onClick = { selectedTabIndex = 0 }, text = { Text("Golf") })
+                         Tab(selected = selectedTabIndex == 1, onClick = { selectedTabIndex = 1 }, text = { Text("Mini Golf") })
                      }
                  }
              }
         }
     ) { innerPadding ->
+        val rounds = when {
+            uiState.showTabs && selectedTabIndex == 0 -> uiState.rounds.filter { !it.isMiniGolf }
+            uiState.showTabs && selectedTabIndex == 1 -> uiState.rounds.filter { it.isMiniGolf }
+            else -> uiState.rounds
+        }
+        
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -172,7 +189,8 @@ fun HomeScreen(
                 RoundItem(
                     round = round,
                     onClick = { onRoundClick(round.id) },
-                    onDelete = { roundToDelete = round }
+                    onDelete = { roundToDelete = round },
+                    showTabs = uiState.showTabs
                 )
             }
         }
@@ -183,12 +201,13 @@ fun HomeScreen(
 fun RoundItem(
     round: Round, 
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    showTabs: Boolean
 ) {
     val dateFormatter = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
     val formattedDate = dateFormatter.format(Date(round.date))
     
-    // Calculate progress (holes played / total holes)
+    // Calculate progress
     val holesPlayed = if (round.scores.values.isNotEmpty()) {
          round.scores.values.flatMap { it.keys }.maxOrNull() ?: 0
     } else 0
@@ -225,7 +244,7 @@ fun RoundItem(
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
-                        color = if (round.isFinished) MaterialTheme.colorScheme.secondary.copy(alpha=0.2f) else Color(0xFFFFF8E1), // Yellowish for progress
+                        color = if (round.isFinished) MaterialTheme.colorScheme.secondary.copy(alpha=0.2f) else Color(0xFFFFF8E1),
                         shape = RoundedCornerShape(4.dp)
                     ) {
                         Text(
@@ -247,12 +266,17 @@ fun RoundItem(
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(text = formattedDate, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                 
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                if (round.isMiniGolf) {
-                     Surface(color = MaterialTheme.colorScheme.primary.copy(alpha=0.1f), shape = RoundedCornerShape(4.dp)) {
-                         Text("Mini Golf", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 4.dp))
-                     }
+                if (!showTabs) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    if (round.isMiniGolf) {
+                        Surface(color = MaterialTheme.colorScheme.primary.copy(alpha=0.1f), shape = RoundedCornerShape(4.dp)) {
+                            Text("Mini Golf", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 4.dp))
+                        }
+                    } else {
+                        Surface(color = MaterialTheme.colorScheme.secondary.copy(alpha=0.2f), shape = RoundedCornerShape(4.dp)) {
+                            Text("Golf", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary, modifier = Modifier.padding(horizontal = 4.dp))
+                        }
+                    }
                 }
             }
             
