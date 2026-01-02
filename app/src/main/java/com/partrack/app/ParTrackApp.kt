@@ -5,6 +5,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.partrack.app.ui.home.HomeScreen
+import com.partrack.app.ui.profiles.ProfilesScreen
 import com.partrack.app.ui.round.NewRoundScreen
 import com.partrack.app.ui.round.RoundScreen
 
@@ -16,7 +17,8 @@ fun ParTrackApp() {
         composable("home") {
             HomeScreen(
                 onNewRound = { navController.navigate("new_round") },
-                onRoundClick = { roundId -> navController.navigate("round/$roundId") }
+                onRoundClick = { roundId -> navController.navigate("round/$roundId") },
+                onProfilesClick = { navController.navigate("profiles") }
             )
         }
         composable("new_round") {
@@ -36,6 +38,9 @@ fun ParTrackApp() {
                 onNavigateUp = { navController.navigateUp() },
                 onFinishRound = { navController.navigateUp() }
             )
+        }
+        composable("profiles") {
+            ProfilesScreen(onNavigateUp = { navController.navigateUp() })
         }
     }
 }

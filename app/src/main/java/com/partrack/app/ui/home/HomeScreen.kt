@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.GolfCourse
 import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -65,7 +66,8 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onNewRound: () -> Unit,
-    onRoundClick: (Long) -> Unit
+    onRoundClick: (Long) -> Unit,
+    onProfilesClick: () -> Unit
 ) {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
@@ -106,17 +108,32 @@ fun HomeScreen(
                      .padding(16.dp)
                      .padding(top = 16.dp)
              ) {
-                 Text(
-                     text = "Golf Scorer",
-                     style = MaterialTheme.typography.headlineMedium,
-                     color = MaterialTheme.colorScheme.onPrimary,
-                     fontWeight = FontWeight.Bold
-                 )
-                 Text(
-                     text = "Track your rounds",
-                     style = MaterialTheme.typography.bodyMedium,
-                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                 )
+                 Row(
+                     modifier = Modifier.fillMaxWidth(),
+                     horizontalArrangement = Arrangement.SpaceBetween,
+                     verticalAlignment = Alignment.CenterVertically
+                 ) {
+                     Column {
+                         Text(
+                             text = "Golf Scorer",
+                             style = MaterialTheme.typography.headlineMedium,
+                             color = MaterialTheme.colorScheme.onPrimary,
+                             fontWeight = FontWeight.Bold
+                         )
+                         Text(
+                             text = "Track your rounds",
+                             style = MaterialTheme.typography.bodyMedium,
+                             color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                         )
+                     }
+                     IconButton(onClick = onProfilesClick) {
+                         Icon(
+                             imageVector = Icons.Filled.Person, 
+                             contentDescription = "Profiles", 
+                             tint = MaterialTheme.colorScheme.onPrimary
+                         )
+                     }
+                 }
              }
         }
     ) { innerPadding ->

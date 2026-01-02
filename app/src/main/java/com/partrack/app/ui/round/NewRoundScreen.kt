@@ -1,5 +1,6 @@
 package com.partrack.app.ui.round
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,8 +17,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -48,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.partrack.app.data.AppDatabase
 import com.partrack.app.data.Course
+import com.partrack.app.data.Player
 import com.partrack.app.ui.viewmodels.NewRoundViewModel
 import com.partrack.app.ui.viewmodels.NewRoundViewModelFactory
 
@@ -60,10 +64,11 @@ fun NewRoundScreen(
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
     val viewModel: NewRoundViewModel = viewModel(
-        factory = NewRoundViewModelFactory(database.courseDao(), database.roundDao())
+        factory = NewRoundViewModelFactory(database.courseDao(), database.roundDao(), database.playerDao())
     )
 
     val courses by viewModel.courses.collectAsState(initial = emptyList())
+    val allPlayers by viewModel.players.collectAsState(initial = emptyList())
 
     var roundName by remember { mutableStateOf("") }
     var selectedHolesOption by remember { mutableIntStateOf(9) }
@@ -81,10 +86,7 @@ fun NewRoundScreen(
     val pars = remember { mutableStateListOf<Int>() }
 
     // Players
-    val players = remember { mutableStateListOf("") }
-    if (players.isEmpty()) {
-        players.add("")
-    }
+    val selectedPlayers = remember { mutableStateListOf<Player>() }
 
     // Initialize Pars when holes change
     val currentHolesCount = if (selectedHolesOption == -1) {
@@ -103,14 +105,7 @@ fun NewRoundScreen(
                  pars.removeLast()
              }
          }
-         
-         // If switching modes, maybe update existing default pars? 
-         // For simplicity, let's just ensure defaults for new entries are correct.
-         // Or we could force reset if user toggles mode? 
-         // Let's reset pars if user toggles mode and hasn't manually edited them (complex to track).
-         // Simple approach: When toggling mode, reset all pars to new default.
     }
-
 
     Scaffold(
         topBar = {
@@ -212,7 +207,6 @@ fun NewRoundScreen(
                         onClick = { 
                             if (isMiniGolf) {
                                 isMiniGolf = false
-                                // Reset pars to 4
                                 pars.clear()
                                 repeat(currentHolesCount) { pars.add(4) }
                             }
@@ -225,7 +219,6 @@ fun NewRoundScreen(
                         onClick = { 
                             if (!isMiniGolf) {
                                 isMiniGolf = true
-                                // Reset pars to 2
                                 pars.clear()
                                 repeat(currentHolesCount) { pars.add(2) }
                             }
@@ -238,29 +231,19 @@ fun NewRoundScreen(
 
             Text("Number of Holes", style = MaterialTheme.typography.titleMedium)
             
-            // Disable changing holes if a preset course is selected (unless we edit it, but keep simple for now)
             val holesEnabled = selectedCourse == null || isCreatingNewCourse
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     selected = selectedHolesOption == 9,
-                    onClick = { 
-                        if(holesEnabled) {
-                            selectedHolesOption = 9 
-                            // Re-init pars logic handles the list update
-                        }
-                    },
+                    onClick = { if(holesEnabled) { selectedHolesOption = 9 } },
                     enabled = holesEnabled
                 )
                 Text("9 Holes")
                 Spacer(modifier = Modifier.width(16.dp))
                 RadioButton(
                     selected = selectedHolesOption == 18,
-                    onClick = { 
-                         if(holesEnabled) {
-                             selectedHolesOption = 18 
-                         }
-                    },
+                    onClick = { if(holesEnabled) { selectedHolesOption = 18 } },
                     enabled = holesEnabled
                 )
                 Text("18 Holes")
@@ -268,11 +251,7 @@ fun NewRoundScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     selected = selectedHolesOption == -1,
-                    onClick = { 
-                         if(holesEnabled) {
-                             selectedHolesOption = -1 
-                         }
-                    },
+                    onClick = { if(holesEnabled) { selectedHolesOption = -1 } },
                     enabled = holesEnabled
                 )
                 Text("Custom: ")
@@ -294,17 +273,13 @@ fun NewRoundScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Par Configuration Section
-            if (isCreatingNewCourse || selectedCourse == null) { // Show if creating new or custom round
+            if (isCreatingNewCourse || selectedCourse == null) {
                 Text("Pars", style = MaterialTheme.typography.titleMedium)
-                Text("Scroll horizontally to set pars for all holes", style = MaterialTheme.typography.bodySmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(currentHolesCount) { index ->
-                        // Ensure pars list is big enough (safe access)
                         if (index < pars.size) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("Hole ${index + 1}")
@@ -313,8 +288,6 @@ fun NewRoundScreen(
                                     onValueChange = { newValue ->
                                         if (newValue.all { it.isDigit() } && newValue.isNotEmpty()) {
                                             pars[index] = newValue.toInt()
-                                        } else if (newValue.isEmpty()) {
-                                             // Allow empty temporarily for editing, handle validation later or default
                                         }
                                     },
                                     modifier = Modifier.width(60.dp),
@@ -326,51 +299,48 @@ fun NewRoundScreen(
                     }
                 }
             } else {
-                 // If course is selected, maybe just show summary?
                  Text("Pars: ${pars.joinToString(", ")}", style = MaterialTheme.typography.bodySmall)
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Text("Players", style = MaterialTheme.typography.titleMedium)
-            Text("Enter names in hitting order", style = MaterialTheme.typography.bodySmall)
             
             Column {
-                players.forEachIndexed { index, name ->
+                allPlayers.forEach { player ->
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable { 
+                            if (selectedPlayers.contains(player)) {
+                                selectedPlayers.remove(player)
+                            } else {
+                                selectedPlayers.add(player)
+                            }
+                        },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedTextField(
-                            value = name,
-                            onValueChange = { players[index] = it },
-                            label = { Text("Player ${index + 1}") },
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (players.size > 1) {
-                            IconButton(onClick = { players.removeAt(index) }) {
-                                Icon(Icons.Filled.Delete, contentDescription = "Remove Player")
+                        Checkbox(
+                            checked = selectedPlayers.contains(player),
+                            onCheckedChange = { isChecked ->
+                                if (isChecked) {
+                                    selectedPlayers.add(player)
+                                } else {
+                                    selectedPlayers.remove(player)
+                                }
                             }
-                        }
+                        )
+                        Text(player.name)
                     }
                 }
-            }
-            
-            OutlinedButton(
-                onClick = { players.add("") },
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Player")
+                if (allPlayers.isEmpty()) {
+                    Text("No players found. Add some in the Profiles screen.")
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
                 onClick = {
-                    val validPlayers = players.filter { it.isNotBlank() }
-                    val finalPlayers = if (validPlayers.isEmpty()) listOf("Player 1") else validPlayers
+                    val finalPlayers = if (selectedPlayers.isEmpty()) listOf("Player 1") else selectedPlayers.map { it.name }
                     
                     val name = if (roundName.isBlank()) "Round ${System.currentTimeMillis()}" else roundName
                     
@@ -387,7 +357,8 @@ fun NewRoundScreen(
                         onResult = onRoundCreated
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = selectedPlayers.isNotEmpty() || allPlayers.isEmpty() // Enable if players selected, or if there are no profiles to select from
             ) {
                 Text(if (isCreatingNewCourse) "Save Course & Start Round" else "Start Round")
             }
