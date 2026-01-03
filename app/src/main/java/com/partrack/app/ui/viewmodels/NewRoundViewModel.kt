@@ -13,6 +13,7 @@ import com.partrack.app.data.RoundDao
 import com.partrack.app.data.SettingsDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -42,8 +43,15 @@ class NewRoundViewModel(
         onResult: (Long) -> Unit
     ) {
         viewModelScope.launch {
+            val finalName = if (name.isNotBlank()) name else {
+                val rounds = roundDao.getAllRounds().first()
+                val roundNumbers = rounds.mapNotNull { it.name.removePrefix("Round ").toIntOrNull() }
+                val nextRoundNumber = (roundNumbers.maxOrNull() ?: 0) + 1
+                "Round $nextRoundNumber"
+            }
+            
             val newRound = Round(
-                name = name,
+                name = finalName,
                 date = System.currentTimeMillis(),
                 holes = holes,
                 playerNames = playerNames,

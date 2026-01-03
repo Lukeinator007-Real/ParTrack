@@ -43,11 +43,20 @@ class RoundViewModel(
         }
     }
 
-    fun updateRoundDetails(name: String, holes: Int) {
+    fun updateRoundDetails(name: String, holes: Int, date: Long, playerNames: List<String>) {
         viewModelScope.launch {
             val currentRound = roundDao.getRoundById(roundId) ?: return@launch
-            val updatedRound = currentRound.copy(name = name, holes = holes)
+            val updatedRound = currentRound.copy(name = name, holes = holes, date = date, playerNames = playerNames)
             roundDao.updateRound(updatedRound)
+        }
+    }
+
+    fun deleteRound(onFinished: () -> Unit) {
+        viewModelScope.launch {
+            round.first()?.let { 
+                roundDao.deleteRound(it)
+                onFinished()
+            }
         }
     }
 

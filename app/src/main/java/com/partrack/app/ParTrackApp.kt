@@ -49,7 +49,10 @@ fun ParTrackApp() {
             val roundId = backStackEntry.arguments?.getString("roundId")?.toLongOrNull() ?: 0L
             RoundSettingsScreen(
                 roundId = roundId,
-                onNavigateUp = { navController.navigateUp() }
+                onNavigateUp = { navController.navigateUp() },
+                onDeleteConfirmed = { 
+                    navController.popBackStack("home", inclusive = false)
+                }
             )
         }
         composable("scorecard/{roundId}") { backStackEntry ->
