@@ -80,16 +80,11 @@ fun NewRoundScreen(
     var isCreatingNewCourse by remember { mutableStateOf(false) }
     
     // Game Mode
-    var isMiniGolf by remember(settings) { mutableStateOf(settings.defaultGameModeIsMiniGolf) }
-
-    // Set initial game mode from settings
-    LaunchedEffect(settings) {
-        isMiniGolf = settings.defaultGameModeIsMiniGolf
-    }
+    var isMiniGolf by remember { mutableStateOf(settings.defaultGameModeIsMiniGolf) }
 
     // Pars
     val pars = remember { mutableStateListOf<Int>() }
-
+    
     // Players
     val selectedPlayers = remember { mutableStateListOf<Player>() }
     var newPlayerName by remember { mutableStateOf("") }
@@ -99,6 +94,17 @@ fun NewRoundScreen(
         customHoles.toIntOrNull() ?: 9
     } else {
         selectedHolesOption
+    }
+    
+    // This effect ensures that when the screen is first composed or when the settings change,
+    // the local isMiniGolf state is correctly initialized and pars are updated accordingly.
+    LaunchedEffect(settings, currentHolesCount) {
+        if (isMiniGolf != settings.defaultGameModeIsMiniGolf) {
+            isMiniGolf = settings.defaultGameModeIsMiniGolf
+            pars.clear()
+            val defaultPar = if (settings.defaultGameModeIsMiniGolf) 2 else 4
+            repeat(currentHolesCount) { pars.add(defaultPar) }
+        }
     }
 
     // Update pars list size when hole count changes

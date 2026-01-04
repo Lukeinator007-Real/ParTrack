@@ -12,14 +12,14 @@ import kotlinx.coroutines.launch
 
 class ProfilesViewModel(
     private val playerDao: PlayerDao,
-    private val roundDao: RoundDao
+    roundDao: RoundDao
 ) : ViewModel() {
 
     val players: Flow<List<Player>> = playerDao.getAllPlayers()
     
     val stats = roundDao.getAllRounds().map { rounds ->
         val totalRounds = rounds.size
-        val totalHoles = rounds.sumOf { it.holes }
+        val totalHoles = rounds.sumOf { it.scores.values.sumOf { scores -> scores.size } }
         val holesInOne = rounds.sumOf { round ->
             if (round.isMiniGolf) {
                 round.scores.values.sumOf { scores -> scores.count { it.value == 1 } }

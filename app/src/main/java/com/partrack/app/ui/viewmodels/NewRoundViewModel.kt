@@ -22,7 +22,7 @@ class NewRoundViewModel(
     private val courseDao: CourseDao,
     private val roundDao: RoundDao,
     private val playerDao: PlayerDao,
-    private val settingsDao: SettingsDao
+    settingsDao: SettingsDao
 ) : ViewModel() {
 
     val courses: Flow<List<Course>> = courseDao.getAllCourses()
@@ -43,7 +43,7 @@ class NewRoundViewModel(
         onResult: (Long) -> Unit
     ) {
         viewModelScope.launch {
-            val finalName = if (name.isNotBlank()) name else {
+            val finalName = name.ifBlank {
                 val rounds = roundDao.getAllRounds().first()
                 val roundNumbers = rounds.mapNotNull { it.name.removePrefix("Round ").toIntOrNull() }
                 val nextRoundNumber = (roundNumbers.maxOrNull() ?: 0) + 1

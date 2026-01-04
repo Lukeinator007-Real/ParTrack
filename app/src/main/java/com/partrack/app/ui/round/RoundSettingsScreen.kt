@@ -2,11 +2,9 @@ package com.partrack.app.ui.round
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -43,10 +41,11 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -73,29 +72,29 @@ fun RoundSettingsScreen(
     val viewModel: RoundViewModel = viewModel(factory = RoundViewModelFactory(database.roundDao(), roundId))
     val round by viewModel.round.collectAsState(initial = null)
 
-    var roundName by remember(round) { mutableStateOf(round?.name ?: "") }
-    var holes by remember(round) { mutableStateOf(round?.holes ?: 9) }
-    var date by remember(round) { mutableStateOf(round?.date ?: System.currentTimeMillis()) }
+    val (roundName, setRoundName) = remember(round) { mutableStateOf(round?.name ?: "") }
+    val (holes, setHoles) = remember(round) { mutableIntStateOf(round?.holes ?: 9) }
+    val (date, setDate) = remember(round) { mutableLongStateOf(round?.date ?: System.currentTimeMillis()) }
     val players = remember(round) { mutableStateListOf<String>().also { it.addAll(round?.playerNames ?: emptyList()) } }
     
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    val (showDatePicker, setShowDatePicker) = remember { mutableStateOf(false) }
+    val (showDeleteConfirmation, setShowDeleteConfirmation) = remember { mutableStateOf(false) }
 
     if (showDeleteConfirmation) {
         AlertDialog(
-            onDismissRequest = { showDeleteConfirmation = false },
+            onDismissRequest = { setShowDeleteConfirmation(false) },
             title = { Text("Delete Round") },
             text = { Text("Are you sure you want to delete this round?") },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteRound { onDeleteConfirmed() }
-                    showDeleteConfirmation = false
+                    setShowDeleteConfirmation(false)
                 }) {
                     Text("Delete", color = Color.Red)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmation = false }) {
+                TextButton(onClick = { setShowDeleteConfirmation(false) }) {
                     Text("Cancel")
                 }
             }
@@ -114,7 +113,7 @@ fun RoundSettingsScreen(
             )
         },
         bottomBar = {
-            Column(modifier = Modifier.navigationBarsPadding()) { // Added padding here
+            Column(modifier = Modifier.navigationBarsPadding()) { 
                 Button(
                     onClick = {
                         viewModel.updateRoundDetails(roundName, holes, date, players)
@@ -134,7 +133,7 @@ fun RoundSettingsScreen(
                 item {
                     OutlinedTextField(
                         value = roundName,
-                        onValueChange = { roundName = it },
+                        onValueChange = setRoundName,
                         label = { Text("Round Name") },
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -145,7 +144,7 @@ fun RoundSettingsScreen(
                         onValueChange = { },
                         readOnly = true,
                         label = { Text("Date") },
-                        modifier = Modifier.fillMaxWidth().clickable { showDatePicker = true }
+                        modifier = Modifier.fillMaxWidth().clickable { setShowDatePicker(true) }
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -157,11 +156,11 @@ fun RoundSettingsScreen(
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
                         Text("Number of Holes", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { if (holes > 1) holes-- }) {
+                        IconButton(onClick = { if (holes > 1) setHoles(holes - 1) }) {
                             Icon(Icons.Default.Remove, contentDescription = "Decrease holes")
                         }
                         Text("$holes", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        IconButton(onClick = { holes++ }) {
+                        IconButton(onClick = { setHoles(holes + 1) }) {
                             Icon(Icons.Default.Add, contentDescription = "Increase holes")
                         }
                     }
@@ -189,7 +188,7 @@ fun RoundSettingsScreen(
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                     OutlinedButton(
-                        onClick = { showDeleteConfirmation = true },
+                        onClick = { setShowDeleteConfirmation(true) },
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red)
                     ) {
@@ -205,17 +204,17 @@ fun RoundSettingsScreen(
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(initialSelectedDateMillis = date)
         DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
+            onDismissRequest = { setShowDatePicker(false) },
             confirmButton = {
                 TextButton(onClick = { 
-                    datePickerState.selectedDateMillis?.let { date = it }
-                    showDatePicker = false 
+                    datePickerState.selectedDateMillis?.let { setDate(it) }
+                    setShowDatePicker(false) 
                 }) {
                     Text("OK")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
+                TextButton(onClick = { setShowDatePicker(false) }) {
                     Text("Cancel")
                 }
             }

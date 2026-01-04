@@ -4,7 +4,9 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.partrack.app.ui.courses.CoursesScreen
 import com.partrack.app.ui.home.HomeScreen
+import com.partrack.app.ui.profiles.PlayerDetailsScreen
 import com.partrack.app.ui.profiles.ProfilesScreen
 import com.partrack.app.ui.round.NewRoundScreen
 import com.partrack.app.ui.round.RoundScreen
@@ -22,7 +24,8 @@ fun ParTrackApp() {
                 onNewRound = { navController.navigate("new_round") },
                 onRoundClick = { roundId -> navController.navigate("round/$roundId") },
                 onProfilesClick = { navController.navigate("profiles") },
-                onSettingsClick = { navController.navigate("settings") }
+                onSettingsClick = { navController.navigate("settings") },
+                onCoursesClick = { navController.navigate("courses") }
             )
         }
         composable("new_round") {
@@ -63,10 +66,23 @@ fun ParTrackApp() {
             )
         }
         composable("profiles") {
-            ProfilesScreen(onNavigateUp = { navController.navigateUp() })
+            ProfilesScreen(
+                onNavigateUp = { navController.navigateUp() },
+                onPlayerClick = { playerId -> navController.navigate("player_details/$playerId") }
+            )
+        }
+        composable("player_details/{playerId}") { backStackEntry ->
+            val playerId = backStackEntry.arguments?.getString("playerId")?.toLongOrNull() ?: 0L
+            PlayerDetailsScreen(
+                playerId = playerId,
+                onNavigateUp = { navController.navigateUp() }
+            )
         }
         composable("settings") {
             SettingsScreen(onNavigateUp = { navController.navigateUp() })
+        }
+        composable("courses") {
+            CoursesScreen(onNavigateUp = { navController.navigateUp() })
         }
     }
 }

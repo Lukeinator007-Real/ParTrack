@@ -12,6 +12,9 @@ interface PlayerDao {
     @Query("SELECT * FROM players ORDER BY name ASC")
     fun getAllPlayers(): Flow<List<Player>>
 
+    @Query("SELECT * FROM players WHERE id = :id")
+    fun getPlayerById(id: Long): Flow<Player?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlayer(player: Player)
 

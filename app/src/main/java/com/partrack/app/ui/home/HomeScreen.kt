@@ -69,31 +69,32 @@ fun HomeScreen(
     onNewRound: () -> Unit,
     onRoundClick: (Long) -> Unit,
     onProfilesClick: () -> Unit,
-    onSettingsClick: () -> Unit
+    onSettingsClick: () -> Unit,
+    onCoursesClick: () -> Unit
 ) {
     val context = LocalContext.current
     val database = AppDatabase.getDatabase(context)
     val viewModel: HomeViewModel = viewModel(factory = HomeViewModelFactory(database.roundDao(), database.settingsDao()))
     val uiState by viewModel.uiState.collectAsState()
     
-    var roundToDelete by remember { mutableStateOf<Round?>(null) }
+    val (roundToDelete, setRoundToDelete) = remember { mutableStateOf<Round?>(null) }
     var selectedTabIndex by remember { mutableIntStateOf(0) }
 
     if (roundToDelete != null) {
         AlertDialog(
-            onDismissRequest = { roundToDelete = null },
+            onDismissRequest = { setRoundToDelete(null) },
             title = { Text("Delete Round") },
             text = { Text("Are you sure you want to delete this round?") },
             confirmButton = {
                 TextButton(onClick = {
-                    roundToDelete?.let { viewModel.deleteRound(it) }
-                    roundToDelete = null
+                    roundToDelete.let { viewModel.deleteRound(it) }
+                    setRoundToDelete(null)
                 }) {
                     Text("Delete")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { roundToDelete = null }) {
+                TextButton(onClick = { setRoundToDelete(null) }) {
                     Text("Cancel")
                 }
             }
@@ -123,6 +124,13 @@ fun HomeScreen(
                          )
                      }
                      Row {
+                         IconButton(onClick = onCoursesClick) {
+                             Icon(
+                                 imageVector = Icons.Filled.GolfCourse, 
+                                 contentDescription = "Courses", 
+                                 tint = MaterialTheme.colorScheme.onPrimary
+                             )
+                         }
                          IconButton(onClick = onProfilesClick) {
                              Icon(
                                  imageVector = Icons.Filled.Person, 
@@ -189,7 +197,7 @@ fun HomeScreen(
                 RoundItem(
                     round = round,
                     onClick = { onRoundClick(round.id) },
-                    onDelete = { roundToDelete = round },
+                    onDelete = { setRoundToDelete(round) },
                     showTabs = uiState.showTabs
                 )
             }

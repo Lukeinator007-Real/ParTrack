@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 class HomeViewModel(
     private val roundDao: RoundDao,
-    private val settingsDao: SettingsDao
+    settingsDao: SettingsDao
 ) : ViewModel() {
 
     private val allRounds: Flow<List<Round>> = roundDao.getAllRounds()

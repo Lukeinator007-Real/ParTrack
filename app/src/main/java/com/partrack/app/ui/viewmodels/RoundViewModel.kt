@@ -60,14 +60,6 @@ class RoundViewModel(
         }
     }
 
-    fun updateTotalHoles(newHoles: Int) {
-        viewModelScope.launch {
-            val currentRound = roundDao.getRoundById(roundId) ?: return@launch
-            val updatedRound = currentRound.copy(holes = newHoles)
-            roundDao.updateRound(updatedRound)
-        }
-    }
-
     fun finishRound() {
         viewModelScope.launch {
             val currentRound = roundDao.getRoundById(roundId) ?: return@launch
@@ -95,9 +87,8 @@ class RoundViewModel(
 
         if (s1 != s2) {
             return s1 - s2 // Ascending score is better (lower is better in golf)
-        } else {
-            return comparePlayers(p1, p2, holeToCheck - 1, scores)
         }
+        return comparePlayers(p1, p2, holeToCheck - 1, scores)
     }
 }
 
